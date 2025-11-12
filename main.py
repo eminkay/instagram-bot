@@ -1,32 +1,50 @@
+import os
 import telebot
 import yt_dlp
 
-# Telegram Bot Token
-BOT_TOKEN = "8355946944:AAEHxTgusJ3skFHsZH9I54IX7k-GkxX_2zY"  # örn: 8355946944:AAEHxTgusJ3...
-
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 bot = telebot.TeleBot(BOT_TOKEN)
 
-@bot.message_handler(commands=['start'])
-def start(message):
-    bot.reply_to(message, "👋 Selam! Instagram linkini gönder, videoyu indirip sana atayım.")
+@bot.message_handler(commands=["start", "help"])
+def send_welcome(message):
+    bot.reply_to(
+        message,
+        "👋 Selam! Instagram Reels linkini gönder, senin için indirip yollarım 📥"
+    )
 
-@bot.message_handler(func=lambda message: True)
-def download_instagram_video(message):
+@bot.message_handler(func=lambda m: True)
+def download_instagram_reel(message):
     url = message.text.strip()
-    bot.reply_to(message, "📥 Videoyu indiriyorum, biraz bekle...")
+
+    if "instagram.com" not in url:
+        bot.reply_to(message, "❌ Geçerli bir Instagram Reels linki gönder.")
+        return
+
+    bot.reply_to(message, "🎬 Videoyu indiriyorum, biraz bekle...")
+
     try:
         ydl_opts = {
-            'outtmpl': 'video.mp4',
-            'quiet': True,
-            'format': 'best'
+            "outtmpl": "reel.%(ext)s",
+            "quiet": True,
+            "format": "mp4",
+            "no_warnings": True,
         }
+
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([url])
-        with open("video.mp4", "rb") as video:
+            info = ydl.extract_info(url, download=True)
+            filename = ydl.prepare_filename(info)
+            base, ext = os.path.splitext(filename)
+            video_path = base + ".mp4"
+
+        with open(video_path, "rb") as video:
             bot.send_video(message.chat.id, video)
+
+        bot.reply_to(message, "✅ Reels başarıyla indirildi!")
+        os.remove(video_path)
+
     except Exception as e:
-        bot.reply_to(message, f"⚠️ Hata oluştu: {e}")
+        print(f"Hata: {e}")
+        bot.reply_to(message, "⚠️ Bir hata oluştu, lütfen tekrar dene.")
 
-print("🤖 Bot çalışıyor...")
+print("🚀 Bot başlatıldı, Reels linklerini bekliyor...")
 bot.infinity_polling()
-
