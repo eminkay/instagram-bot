@@ -54,4 +54,6 @@ def handle_message(message):
     except Exception as e:
         bot.reply_to(message, f"❌ Bi’ şey ters gitti: {str(e)}")
 
+# 🔧 Webhook'u kapat, polling başlat
+bot.remove_webhook()
 bot.polling(non_stop=True)
