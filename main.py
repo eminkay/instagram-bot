@@ -1,60 +1,57 @@
-import os
 import telebot
-import yt_dlp
-import telebot
-from telebot import apihelper
 import subprocess
-from flask import Flask, request
+import os
 
-apihelper.ENABLE_MIDDLEWARE = False  # eski thread'lerin çakışmasını önler
-
-
+# Telegram bot token (Render Environment Variables kısmına BOT_TOKEN olarak ekle)
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 bot = telebot.TeleBot(BOT_TOKEN)
 
-app = Flask(__name__)
+# cookies.txt yolu (Secret Files kısmına cookies.txt olarak ekledin zaten)
+COOKIES_PATH = "/etc/secrets/cookies.txt"
 
-@app.route('/')
-def home():
-    return "Bot is running!"
+DOWNLOAD_DIR = "downloads"
+os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
-@app.route('/' + BOT_TOKEN, methods=['POST'])
-def webhook():
-    json_str = request.get_data().decode('UTF-8')
-    update = telebot.types.Update.de_json(json_str)
-    bot.process_new_updates([update])
-    return "!", 200
+@bot.message_handler(commands=['start'])
+def send_welcome(message):
+    bot.reply_to(message, "Selam moruk 👋 Sadece bir Instagram Reels linki at, gerisini hallederim.")
 
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
     url = message.text.strip()
     if "instagram.com" not in url:
-        bot.reply_to(message, "Lütfen geçerli bir Instagram Reels linki gönder 💬")
+        bot.reply_to(message, "Moruk bu Instagram linki değil 😅")
         return
 
-    bot.reply_to(message, "🎥 Reels indiriliyor, lütfen bekle...")
+    bot.reply_to(message, "📥 İndiriyorum, az bekle moruk...")
 
     try:
-        ydl_opts = {
-            'outtmpl': '%(title)s.%(ext)s',
-            'quiet': True,
-            'noplaylist': True,
-            'format': 'mp4'
-        }
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
-            filename = ydl.prepare_filename(info)
+        # Dosya ismini dinamik oluştur
+        output_template = os.path.join(DOWNLOAD_DIR, "%(title)s.%(ext)s")
+        cmd = [
+            "yt-dlp",
+            "--cookiefile", COOKIES_PATH,
+            "-o", output_template,
+            url
+        ]
+        subprocess.run(cmd, check=True)
 
-        with open(filename, 'rb') as video:
-            bot.send_video(message.chat.id, video)
+        # En son indirilen dosyayı bul
+        files = sorted(os.listdir(DOWNLOAD_DIR), key=lambda x: os.path.getctime(os.path.join(DOWNLOAD_DIR, x)), reverse=True)
+        latest_file = os.path.join(DOWNLOAD_DIR, files[0])
 
-        os.remove(filename)
+        # Dosya boyutu kontrolü (Telegram sınırı 50 MB)
+        if os.path.getsize(latest_file) > 50 * 1024 * 1024:
+            bot.reply_to(message, "⚠️ Moruk dosya 50 MB’tan büyük, Telegram izin vermiyor.")
+        else:
+            with open(latest_file, "rb") as video:
+                bot.send_video(message.chat.id, video)
+        # Temizlik
+        os.remove(latest_file)
+
+    except subprocess.CalledProcessError:
+        bot.reply_to(message, "🚫 Hata oluştu moruk, linki kontrol et.")
     except Exception as e:
-        bot.reply_to(message, f"❌ Hata: {e}")
+        bot.reply_to(message, f"❌ Bi’ şey ters gitti: {str(e)}")
 
-if __name__ == '__main__':
-    # Webhook ayarı (Render linkini buraya yazacaksın)
-    webhook_url = "https://instagram-bot-xxxx.onrender.com/" + BOT_TOKEN
-    bot.remove_webhook()
-    bot.set_webhook(url=webhook_url)
-    app.run(host="0.0.0.0", port=int(os.environ.get('PORT', 5000)))
+bot.polling(non_stop=True)
