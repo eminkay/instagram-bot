@@ -2,7 +2,7 @@ import telebot
 import yt_dlp
 
 # Telegram Bot Token
-BOT_TOKEN = "BURAYA_TOKENİNİ_YAZ"  # örn: 8355946944:AAEHxTgusJ3...
+BOT_TOKEN = "8355946944:AAEHxTgusJ3skFHsZH9I54IX7k-GkxX_2zY"  # örn: 8355946944:AAEHxTgusJ3...
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
@@ -29,3 +29,4 @@ def download_instagram_video(message):
 
 print("🤖 Bot çalışıyor...")
 bot.infinity_polling()
+
