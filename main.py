@@ -1,6 +1,11 @@
 import os
 import telebot
 import yt_dlp
+import telebot
+from telebot import apihelper
+
+apihelper.ENABLE_MIDDLEWARE = False  # eski thread'lerin çakışmasını önler
+
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 bot = telebot.TeleBot(BOT_TOKEN)
@@ -48,3 +53,4 @@ def download_instagram_reel(message):
 
 print("🚀 Bot başlatıldı, Reels linklerini bekliyor...")
 bot.infinity_polling()
+
