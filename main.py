@@ -6,6 +6,15 @@ import os
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 bot = telebot.TeleBot(BOT_TOKEN)
 
+# 🔧 Webhook'u kapat, polling başlat
+if __name__ == "__main__":
+    try:
+        bot.remove_webhook()
+        bot.polling(non_stop=True)
+    except Exception as e:
+        print(f"Polling başlatılamadı moruk: {e}")
+
+
 # cookies.txt yolu (Secret Files kısmına cookies.txt olarak ekledin zaten)
 COOKIES_PATH = "/etc/secrets/cookies.txt"
 
@@ -54,6 +63,3 @@ def handle_message(message):
     except Exception as e:
         bot.reply_to(message, f"❌ Bi’ şey ters gitti: {str(e)}")
 
-# 🔧 Webhook'u kapat, polling başlat
-bot.remove_webhook()
-bot.polling(non_stop=True)
